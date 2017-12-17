@@ -9,6 +9,7 @@ def init_configuration(app_configuration):
     conf.setAppName("My application")
     conf.set("spark.driver.extraClassPath", "configuration/postgresql-42.1.4.jar")
     conf.set(" spark.executor.extraClassPath", "configuration/postgresql-42.1.4.jar")
+    conf.set("spark.sql.execution.arrow.enable", "true")
     conf.set("spark.executor.memory", "1g")
     sc = SparkContext(conf=conf)
     sc_sql = SparkSession(sc)
