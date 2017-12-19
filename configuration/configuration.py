@@ -1,6 +1,5 @@
 import json
 
-
 def get_configuration(flag):
 
     data = json.load(open('configuration/conf.json'))

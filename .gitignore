@@ -2,3 +2,4 @@
 .idea/
 /metastore_db/
 /derby.log
+/model/__pycache__/*.pyc
