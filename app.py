@@ -5,10 +5,10 @@ from spark import spark
 import pandas as pd
 import matplotlib.pyplot as plt
 import warnings
-from algorithms.arima.arima import difference
+from algorithm.arima.arima import difference
 
 # Models
-from model import price, currency
+from model import price, currency, category
 
 app_configuration = configuration.get_configuration('remote')
 sc, url = spark.init_configuration(app_configuration)
@@ -18,6 +18,9 @@ plt.style.use('classic')
 
 rdd_list_prices = price.get_prices(sc)
 rdd_list_currencies = currency.get_currency(sc)
+
+category = category.Category("B0019X20R8", [])
+category.get_categories_by_item("B0019X20R8", sc)
 
 df_list_price = sc.createDataFrame(rdd_list_prices)
 df_list_currencies = sc.createDataFrame(rdd_list_currencies)

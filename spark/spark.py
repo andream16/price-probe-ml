@@ -20,7 +20,7 @@ def init_configuration(app_configuration):
 def init_tables(sc, url):
     item.set_item_table(sc, url)
     price.set_price_table(sc, url)
-    category.set_category_table(sc, url)
+    category.Category.set_category_item_table(sc, url)
     currency.set_currency_table(sc, url)
     manufacturer.set_manufacturer_table(sc, url)
     review.set_review_table(sc, url)
