@@ -39,6 +39,7 @@ def evaluate_models(dataset, p_values, d_values, q_values):
                 except:
                     continue
     print('Best ARIMA%s MSE=%.3f' % (best_cfg, best_score))
+    return best_cfg
 
 
 # create a differenced series
