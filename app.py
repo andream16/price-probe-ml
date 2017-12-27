@@ -5,7 +5,7 @@ from spark import spark
 import pandas as pd
 import matplotlib.pyplot as plt
 import warnings
-from arima import difference
+from algorithms.arima.arima import difference
 
 # Models
 from model import price, currency

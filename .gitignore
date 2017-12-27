@@ -5,3 +5,7 @@
 /**/__pycache_/*
 __pycache__/
 *.pyc
+/spark-warehouse/
+__init_py__
+/**/__init_py__
+spark-warehouse/
