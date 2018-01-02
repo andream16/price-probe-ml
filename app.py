@@ -19,7 +19,7 @@ plt.style.use('classic')
 rdd_list_prices = price.get_prices(sc)
 rdd_list_currencies = currency.get_currency(sc)
 
-category = category.Category("B0019X20R8", [])
+category = category.Category("", [])
 category.get_categories_by_item("B0019X20R8", sc)
 
 df_list_price = sc.createDataFrame(rdd_list_prices)

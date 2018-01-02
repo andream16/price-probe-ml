@@ -5,7 +5,6 @@ def set_item_table(sc, url):
         driver='org.postgresql.Driver',
         dbtable='item',
         user='postgres'
-        # password='your_password')
     ).load()
     df.createOrReplaceTempView("item")
 
