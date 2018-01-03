@@ -10,7 +10,7 @@ from pyspark import SparkContext
 class Category:
 
     # DB
-    sqlEntry = namedtuple("Category_Item", "category")
+    sql_entry = namedtuple("Category_Item", "category")
     # Dictionary
     categories_by_item = {}
     items_by_category = {}
@@ -43,7 +43,7 @@ class Category:
     # Helpers
     def get_categories_by_item(self, item_id: str, sc: SparkContext):
         data_frame = sc.sql('SELECT category FROM category_item WHERE item = "{}"'.format(item_id))
-        categories = data_frame.rdd.map(lambda row: self.sqlEntry(row[0])).collect()
+        categories = data_frame.rdd.map(lambda row: self.sql_entry(row[0])).collect()
         for c in categories:
             if c:
                 self.categories.append(c)
