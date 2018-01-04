@@ -7,6 +7,7 @@ from pyspark import SparkContext
 # DB
 sql_entry = namedtuple("Price", "date price flag")
 
+
 class PriceEntry:
 
     def __init__(self, date: str, price: float, flag: bool):
@@ -15,13 +16,10 @@ class PriceEntry:
         self.flag = flag
 
 
-class Price:
-
-    # Helpers
-    @staticmethod
-    def get_prices_by_item(sc: SparkContext, item: str):
-        data_frame = sc.sql('SELECT date, price, flag FROM price WHERE item = "{}"'.format(item))
-        parsed_prices: List[PriceEntry] = data_frame.rdd.map(
-            lambda row: sql_entry(row[0], row[1], row[2])).collect()
-        if len(parsed_prices) > 0:
-            return parsed_prices
+# Helpers
+def get_prices_by_item(sc: SparkContext, item: str):
+    data_frame = sc.sql('SELECT date, price, flag FROM price WHERE item = "{}"'.format(item))
+    parsed_prices: List[PriceEntry] = data_frame.rdd.map(
+        lambda row: sql_entry(row[0], row[1], row[2])).collect()
+    if len(parsed_prices) > 0:
+        return parsed_prices
