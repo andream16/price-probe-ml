@@ -1,5 +1,3 @@
-from typing import List
-
 # 3rd party
 from pyspark import SparkContext
 
