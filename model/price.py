@@ -1,26 +1,27 @@
 from collections import namedtuple
-
-from dateutil import parser
-from pyspark import SparkContext
 from typing import List
 
-Prices = namedtuple("Price", "item date price flag")
+# 3rd party
+from pyspark import SparkContext
+
+# DB
+sql_entry = namedtuple("Price", "date price flag")
+
+class PriceEntry:
+
+    def __init__(self, date: str, price: float, flag: bool):
+        self.date = date
+        self.price = price
+        self.flag = flag
 
 
-def set_price_table(sc: SparkContext, url: str):
-    df = sc.read.format("jdbc").options(
-        url=url,
-        driver='org.postgresql.Driver',
-        dbtable='price',
-        user='postgres'
-    ).load()
-    df.createOrReplaceTempView("price")
+class Price:
 
-
-def get_prices(sc: SparkContext) -> List:
-    df = sc.sql("Select p.item, p.date, p.price, p.flag from price p where p.item ='B00DP4AR10'")
-    prices = []
-    prz = df.rdd.map(lambda row: Prices(row[0], parser.parse(row[1]), row[2], row[3]))
-    for p in prz.collect():
-        prices.append(p)
-    return prices
+    # Helpers
+    @staticmethod
+    def get_prices_by_item(sc: SparkContext, item: str):
+        data_frame = sc.sql('SELECT date, price, flag FROM price WHERE item = "{}"'.format(item))
+        parsed_prices: List[PriceEntry] = data_frame.rdd.map(
+            lambda row: sql_entry(row[0], row[1], row[2])).collect()
+        if len(parsed_prices) > 0:
+            return parsed_prices

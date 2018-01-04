@@ -1,10 +1,24 @@
-def set_trend_table(sc, url):
+from collections import namedtuple
+from typing import List
 
-    df = sc.read.format("jdbc").options(
-        url=url,
-        driver='org.postgresql.Driver',
-        dbtable='trend',
-        user='postgres'
-        # password='your_password')
-    ).load()
-    df.createOrReplaceTempView("trend")
+# 3rd party
+from pyspark import SparkContext
+
+# DB
+sql_entry = namedtuple("review", "date value")
+
+
+class TrendEntry:
+
+    def __init__(self, date: str, value: float):
+        self.date = date
+        self.value = value
+
+
+# Helpers
+def get_trend_by_manufacturer(sc: SparkContext, manufacturer: str):
+    data_frame = sc.sql('SELECT date, value FROM trend WHERE manufacturer = "{}"'.format(manufacturer))
+    parsed_trend_entries: List[TrendEntry] = data_frame.rdd.map(
+        lambda row: sql_entry(row[0], row[1])).collect()
+    if len(parsed_trend_entries) > 0:
+        return parsed_trend_entries
