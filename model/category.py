@@ -6,7 +6,7 @@ from pyspark import SparkContext
 
 
 # DB
-sql_entry = namedtuple("Category_Item", "category")
+sql_entry = namedtuple("Category_Item", "item category")
 # Dictionary
 categories_by_item = {}
 items_by_category = {}
@@ -52,8 +52,8 @@ def set_all_items_by_category(category: CategoryEntry, item: str):
 
 # Helpers
 def get_categories_by_item(item_id: str, sc: SparkContext):
-    data_frame = sc.sql('SELECT category FROM category_item WHERE item = "{}"'.format(item_id))
-    categories: List[CategoryEntry] = data_frame.rdd.map(lambda row: sql_entry(row[0])).collect()
+    data_frame = sc.sql('SELECT item, category FROM category_item WHERE item = "{}"'.format(item_id))
+    categories: List[CategoryEntry] = data_frame.rdd.map(lambda row: sql_entry(row[0], row[1])).collect()
     if len(categories) > 0:
         set_all_categories_by_item(item_id, categories)
     return categories
