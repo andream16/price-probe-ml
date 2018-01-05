@@ -35,19 +35,19 @@ class Item:
 
 # Helpers
 def get_items(sc: SparkContext, page: int, size: int) -> List[ItemEntry]:
-    start, end = (0,)*2
-    if page == 1:
-        start = 1
-        end = size
-    else:
-        start = ((page - 1) * size) + 1
-        end = page * size
+    start, end = 1, 10
+    #if page == 1:
+     #   start = 1
+    #    end = size
+    #else:
+        #start = ((page - 1) * size) + 1
+        #end = page * size
     data_frame = sc.sql('SELECT item, manufacturer, has_reviews FROM item WHERE id BETWEEN "{}" AND "{}"'
                         .format(start, end))
     parsed_items: List[ItemEntry] = data_frame.rdd.map(lambda row: sql_entry(row[0], row[1], row[2])).collect()
     if len(parsed_items) == size:
         for item in parsed_items:
             items.append(item)
-        page += 1
-        get_items(sc, page, size)
+        #page += 1
+        #get_items(sc, page, size)
     return items
