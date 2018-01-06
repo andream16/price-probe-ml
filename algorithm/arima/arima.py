@@ -1,17 +1,14 @@
 
-import numpy
 # 3rd party
-from pyspark import SparkContext
+import numpy
 from statsmodels.tsa.arima_model import ARIMA
 from sklearn.metrics import mean_squared_error
 import pandas as pd
 import matplotlib.pyplot as plt
-import warnings
 import numpy as np
-import statsmodels.api as sm
-from statsmodels.tsa.stattools import acf, pacf
-# Models
-from model import price, currency
+from statsmodels.tsa.stattools import acf, pacf, adfuller
+
+results = {}
 
 
 # evaluate an ARIMA model for a given order (p,d,q)
@@ -45,10 +42,8 @@ def evaluate_models(dataset, p_values, d_values, q_values):
                     mse = evaluate_arima_model(dataset, order)
                     if mse < best_score:
                         best_score, best_cfg = mse, order
-                    print('ARIMA%s MSE=%.3f' % (order, mse))
                 except:
                     continue
-    print('Best ARIMA%s MSE=%.3f' % (best_cfg, best_score))
     return best_cfg
 
 
@@ -66,88 +61,105 @@ def inverse_difference(history, yhat, interval=1):
     return yhat + history[-interval]
 
 
-def test_arima(sc: SparkContext):
-    plt.style.use('classic')
+def find_d(series, threshold, d):
+    if d > 0:
+        d += 1
+    adfuller_test_results = adfuller(series.values)
+    if (adfuller_test_results[0] < 0 and adfuller_test_results[0] < threshold) or d > 10:
+        return d
+    series = series.diff()
+    find_d(series, threshold, d)
 
-    rdd_list_prices = price.get_prices(sc)
-    rdd_list_currencies = currency.get_currency(sc)
 
-    df_list_price = sc.createDataFrame(rdd_list_prices)
-    df_list_currencies = sc.createDataFrame(rdd_list_currencies)
+def test_arima(title, data_frame_dict):
 
-    pand_price = df_list_price.toPandas()
-    pand_curr = df_list_currencies.toPandas()
+    data_frame_dict['data_frame']['date'] = pd.to_datetime(data_frame_dict['data_frame']['date'])
 
-    pand_curr = pand_curr.set_index('date')
-    pand_price = pand_price.set_index('date')
-    print(sm.tsa.stattools.adfuller(pand_price['price']))
-    print(sm.tsa.stattools.adfuller(pand_curr['value']))
-    fig = plt.figure(figsize=(12, 8))
-    ax1 = fig.add_subplot(211)
-    fig = sm.graphics.tsa.plot_acf(pand_price['price'], lags=40, ax=ax1)
-    ax2 = fig.add_subplot(212)
-    fig = sm.graphics.tsa.plot_pacf(pand_price['price'], lags=40, ax=ax2)
-    plt.show()
+    # Setting index on date
+    data_frame = data_frame_dict['data_frame'].set_index('date')
 
-    lag_acf = acf(pand_price['price'], nlags=40)
-    lag_pacf = pacf(pand_price['price'], nlags=40)
+    prices_column = data_frame['price']
+    prices_elements_number = len(prices_column)
 
-    print('acf', lag_acf)
-    print('pacf', lag_pacf)
-    # threshold values for acf and pacf
-    positive_thrshld = 1.96 / np.sqrt(len(pand_price['price']))
-    negative_thrshld = -1.96 / np.sqrt(len(pand_price['price']))
+    # ACF = Autocorrelation Function. How big are clusters of data containing elements with similar trend.
+    # https://onlinecourses.science.psu.edu/stat510/node/60
+    lag_acf = acf(prices_column, nlags=prices_elements_number)
+    # PACF = Partially Autocorrelation Function. Correlation between points not looking at already visited ones.
+    # https://onlinecourses.science.psu.edu/stat510/node/46
+    lag_pacf = pacf(prices_column, nlags=prices_elements_number)
 
+    # Threshold values for ACF and PACF for 95% Confidence Interval
+    positive_threshold = 1.96 / np.sqrt(prices_elements_number)
+
+    # First time a ACF value crosses positive threshold (AR)
     p = 0
+    # Number of times needed to make the series stationary (I)
+    d = find_d(prices_column, 0.05, 0)
+    # First time a PACF value crosses positive threshold (MA)
     q = 0
-    for value in lag_acf:
-        if value < positive_thrshld:
-            q = lag_acf.index(value)
+    acf_it = 0
+    pacf_it = 0
+    for value in np.nditer(lag_acf):
+        if value < positive_threshold:
+            q = acf_it
             break
-    for value in lag_pacf:
-        if value < positive_thrshld:
-            p = lag_pacf.index(value)
+        else:
+            acf_it += 1
+    for value in np.nditer(lag_pacf):
+        if value < positive_threshold:
+            p = pacf_it
             break
-    print('p', p)
-    print('q', q)
-    pand_merged = pand_price.merge(pand_curr, left_index=True, right_index=True)
+        else:
+            pacf_it += 1
 
-    pand_price.plot()
-    # load dataset
-    # series = Series.from_csv('daily-total-female-births.csv', header=0)
-    series = pand_merged.filter(items=['price', 'date', 'value'])
-    # evaluate parameters
-    p_values = [0, 6, 7, 8, 10]
-    d_values = range(0, 3)
-    q_values = range(0, 3)
-    warnings.filterwarnings("ignore")
+    best_configuration = evaluate_models(prices_column, range(0, p), [d], range(0, q))
 
-    # try all p,d,q values from lists and take only the best one
-    # best_order = evaluate_models(series['price'], p_values, d_values, q_values)
-    best_order = [7, 1, 0]
-    size = int(len(series) * 0.66)
-    X, test = series[0:size]['price'], series[size:]['price']
-    Y = series.head(len(series) - 10)['value']
-    Z = series.tail(10)['value']
-    X.plot()
-    # differenced = difference(X)
+    size = int(len(prices_column) * 0.66)
+    X, test = prices_column[0:size], prices_column[size:]
 
-    # fit model
-    model = ARIMA(X, order=best_order)
-    model_fit = model.fit(disp=0)
-    # one-step out-of sample forecast
-    forecast = model_fit.forecast(steps=len(test))[0]
-    forecast_ewma = pd.ewma(X, span=7)
-    print(forecast_ewma)
+    # External Columns
+    column_names = title.split(',')
+    if len(column_names) > 3:
+        selected_columns_names = [k for k in column_names if (k not in ['price', 'item', 'date', 'category', 'manufacturer'])]
+        selected_columns = data_frame[selected_columns_names]
+        selected_columns, selected_columns_test = selected_columns[0:size], selected_columns[size:]
+        if len(selected_columns_names) > 0:
+            model = ARIMA(X, order=best_configuration, exog=selected_columns)
+            model_fit = model.fit(disp=0)
+            forecast = model_fit.forecast(steps=len(test), exog=selected_columns_test)[0]
+        else:
+            return
+    else:
+        # Fit model
+        model = ARIMA(X, order=best_configuration)
+        model_fit = model.fit(disp=0)
+        # one-step out-of sample forecast
+        forecast = model_fit.forecast(steps=len(test))[0]
     date_forecast = test.index._data
-    print(len(date_forecast))
-    print(len(test))
-    # date_from = date_forecast[0]
-    # date_to = date_forecast[9]
-    # ser_forecast = pd.Series.from_array(forecast)
 
-    # invert the differenced forecast to something usable
-    # forecast = inverse_difference(X, forecast, 365)
-    print(forecast)
-    plt.plot(date_forecast, forecast)
+    results[title] = {
+        'forecast': forecast, 'date_forecast': date_forecast,
+        'score': mean_squared_error(test, forecast), 'prices': prices_column,
+        'train_set': X
+    }
+
+
+def plot_best_result():
+    best_score = 0
+    best_result = {}
+    for attr, value in results.items():
+        if best_score == 0 or results[attr]['score'] < best_score:
+            best_score = results[attr]['score']
+            best_result = {
+                'name': attr, 
+                'prices': results[attr]['prices'],
+                'train_set': results[attr]['train_set'],
+                'date_forecast': results[attr]['date_forecast'],
+                'forecast': results[attr]['forecast']
+            }
+    plt.style.use('classic')
+    best_result['prices'].plot()
+    best_result['train_set'].plot()
+    plt.plot(best_result['date_forecast'], best_result['forecast'])
+    plt.title(best_result['name'])
     plt.show()
