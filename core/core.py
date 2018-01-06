@@ -5,6 +5,9 @@ from itertools import combinations, chain
 from pyspark import SparkContext
 import pandas as pd
 
+# ARIMA
+from algorithm.arima import arima
+
 # Models
 from model import category, currency, item, manufacturer, price, review, trend
 
@@ -16,7 +19,10 @@ def start_algorithm(sc: SparkContext):
     data_frames_combinations = feature_dict_creator(items[6], currencies)
     final_data_frame = get_global_data_frame(data_frames_combinations)
     final_combinations = get_all_possible_combinations_from_features(final_data_frame)
-    get_final_data_frames_dictionary(final_data_frame, final_combinations)
+    final_dictionary_data_frame = get_final_data_frames_dictionary(final_data_frame, final_combinations)
+    for attr, value in final_dictionary_data_frame.items():
+        arima.test_arima(attr, value)
+    arima.plot_best_result()
 
 
 def get_parsed_items(sc: SparkContext) -> (List[item.Item], any):
