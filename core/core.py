@@ -9,20 +9,22 @@ import pandas as pd
 from algorithm.arima import arima
 
 # Models
-from model import category, currency, item, manufacturer, price, review, trend
+from model import category, currency, item, manufacturer, price, review, trend, forecast
 
 NO_MANUFACTURER = 'no_manufacturer'
 
 
-def start_algorithm(sc: SparkContext):
+def start_algorithm(sc: SparkContext, config):
     items, currencies = get_parsed_items(sc)
-    data_frames_combinations = feature_dict_creator(items[6], currencies)
+    # for itm in items:
+    data_frames_combinations = feature_dict_creator(items[0], currencies)
     final_data_frame = get_global_data_frame(data_frames_combinations)
     final_combinations = get_all_possible_combinations_from_features(final_data_frame)
     final_dictionary_data_frame = get_final_data_frames_dictionary(final_data_frame, final_combinations)
     for attr, value in final_dictionary_data_frame.items():
         arima.test_arima(attr, value)
-    arima.plot_best_result()
+    best_result = arima.plot_best_result()
+    forecast.save_forecast(items[0].item, best_result, config)
 
 
 def get_parsed_items(sc: SparkContext) -> (List[item.Item], any):
