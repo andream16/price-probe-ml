@@ -10,6 +10,7 @@ TABLES = [
     'price',
     'review',
     'trend',
+    'forecast'
 ]
 
 

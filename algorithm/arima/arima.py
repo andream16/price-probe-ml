@@ -115,7 +115,7 @@ def test_arima(title, data_frame_dict):
     best_configuration = evaluate_models(prices_column, range(0, p), [d], range(0, q))
 
     size = int(len(prices_column) * 0.66)
-    X, test = prices_column[0:size], prices_column[size:]
+    training_set, test = prices_column[0:size], prices_column[size:]
 
     # External Columns
     column_names = title.split(',')
@@ -124,14 +124,14 @@ def test_arima(title, data_frame_dict):
         selected_columns = data_frame[selected_columns_names]
         selected_columns, selected_columns_test = selected_columns[0:size], selected_columns[size:]
         if len(selected_columns_names) > 0:
-            model = ARIMA(X, order=best_configuration, exog=selected_columns)
+            model = ARIMA(training_set, order=best_configuration, exog=selected_columns)
             model_fit = model.fit(disp=0)
             forecast = model_fit.forecast(steps=len(test), exog=selected_columns_test)[0]
         else:
             return
     else:
         # Fit model
-        model = ARIMA(X, order=best_configuration)
+        model = ARIMA(training_set, order=best_configuration)
         model_fit = model.fit(disp=0)
         # one-step out-of sample forecast
         forecast = model_fit.forecast(steps=len(test))[0]
@@ -140,12 +140,13 @@ def test_arima(title, data_frame_dict):
     results[title] = {
         'forecast': forecast, 'date_forecast': date_forecast,
         'score': mean_squared_error(test, forecast), 'prices': prices_column,
-        'train_set': X
+        'training_set': training_set
     }
 
 
 def plot_best_result():
     best_score = 0
+
     best_result = {}
     for attr, value in results.items():
         if best_score == 0 or results[attr]['score'] < best_score:
@@ -153,13 +154,14 @@ def plot_best_result():
             best_result = {
                 'name': attr, 
                 'prices': results[attr]['prices'],
-                'train_set': results[attr]['train_set'],
+                'training_set': results[attr]['training_set'],
                 'date_forecast': results[attr]['date_forecast'],
                 'forecast': results[attr]['forecast']
             }
     plt.style.use('classic')
     best_result['prices'].plot()
-    best_result['train_set'].plot()
+    best_result['training_set'].plot()
     plt.plot(best_result['date_forecast'], best_result['forecast'])
     plt.title(best_result['name'])
     plt.show()
+    return best_result
