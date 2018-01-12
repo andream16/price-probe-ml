@@ -15,21 +15,25 @@ NO_MANUFACTURER = 'no_manufacturer'
 
 
 def start_algorithm(sc: SparkContext, config):
-    items, currencies = get_parsed_items(sc)
-    # for itm in items:
-    data_frames_combinations = feature_dict_creator(items[0], currencies)
-    final_data_frame = get_global_data_frame(data_frames_combinations)
-    final_combinations = get_all_possible_combinations_from_features(final_data_frame)
-    final_dictionary_data_frame = get_final_data_frames_dictionary(final_data_frame, final_combinations)
-    for attr, value in final_dictionary_data_frame.items():
-        arima.test_arima(attr, value)
-    best_result = arima.plot_best_result()
-    forecast.save_forecast(items[0].item, best_result, config)
+    items = get_parsed_items(sc)
+    for itm in items:
+        data_frames_combinations = feature_dict_creator(itm)
+        print(items[3].item)
+        final_data_frame = get_global_data_frame(data_frames_combinations)
+        final_combinations = get_all_possible_combinations_from_features(final_data_frame)
+        final_dictionary_data_frame = get_final_data_frames_dictionary(final_data_frame, final_combinations)
+        arima_dict = arima.find_arima_parameters_by_dataframe(final_data_frame)
+        for attr, value in final_dictionary_data_frame.items():
+           arima_dict['data_frame'] = value['data_frame']
+           arima.test_arima(attr, arima_dict)
+        best_result = arima.plot_best_result()
+        forecast.save_forecast(itm.item, best_result, config)
+        print("Score "+itm.item+"  : "+best_result['score'])
 
 
 def get_parsed_items(sc: SparkContext) -> (List[item.Item], any):
 
-    currencies = currency.get_currencies(sc)
+    #currencies = currency.get_currencies(sc)
     items = item.get_items(sc, 1, 10)
     final_items = []
     if len(items) > 0:
@@ -46,10 +50,9 @@ def get_parsed_items(sc: SparkContext) -> (List[item.Item], any):
             current_reviews = []
             if i.has_reviews:
                 current_reviews = review.Review.get_reviews_by_item(sc, current_item_id)
-            current_categories = category.get_categories_by_item(current_item_id, sc)
-            final_items.append(item.Item(current_item_id, current_categories, current_manufacturer, current_prices,
+            final_items.append(item.Item(current_item_id, current_manufacturer, current_prices,
                                          current_reviews, current_trend))
-    return final_items, currencies
+    return final_items
 
 
 def get_all_possible_combinations_from_features(data_frame):
@@ -76,41 +79,42 @@ def get_data_frame_from_column_names_and_original_data_frame(column_names, origi
     return original_data_frame[column_names]
 
 
-def feature_dict_creator(itm: item.Item, currencies: any):
+def feature_dict_creator(itm: item.Item):
     data_frames_all_features_dict = {}
     for attr, value in itm.__dict__.items():
-        if attr not in ['item', 'manufacturer'] and len(value) > 0:
+        if attr not in ['item', 'manufacturer'] and value and len(value) > 0:
             data_frames_all_features_dict[attr] = get_pandas_data_frame_from_list({attr: value})
         if attr in ['item', 'manufacturer'] and value != NO_MANUFACTURER:
             data_frames_all_features_dict[attr] = get_pandas_data_frame_from_dictionary({attr: [value]})
     # All features dictionary
-    for attr, value in currencies.items():
-        data_frames_all_features_dict[attr] = get_pandas_data_frame_from_list({attr: value})
     return data_frames_all_features_dict
 
 
 def get_global_data_frame(current_features):
-    tmp_df = pd.DataFrame()
+    tmp_df = pd.DataFrame
+    flag = True
+    manufacturer_flag = False
     if current_features:
         tmp_df = join_data_frames_by_optional_key(key='item', df1=current_features['item'], df2=current_features['prices'])
         for feature_key in current_features.keys():
-            if feature_key != 'item' and feature_key != 'prices':
+            if feature_key != 'item' and feature_key != 'prices' and feature_key != 'trend':
                 if 'manufacturer' in current_features:
+                    manufacturer_flag = True
                     tmp_df = join_data_frames_by_optional_key(df1=current_features['manufacturer'], df2=tmp_df)
-                    if 'trend' in current_features:
-                        tmp_df = join_data_frames_by_optional_key(key=['manufacturer', 'date'], df1=current_features['trend'], df2=tmp_df)
-                if 'categories' in current_features:
-                    tmp_df = join_data_frames_by_optional_key(key='item', df1=current_features['categories'],
-                                                              df2=tmp_df)
+                    if 'trend' in current_features and flag:
+                        flag = False;
+                        tmp_df = join_data_frames_by_optional_key(key=['manufacturer', 'date'], df1=current_features['trend'],
+                                                                  df2=tmp_df)
                 if 'reviews' in current_features:
-                    tmp_df = join_data_frames_by_optional_key(key=['item', 'date'], df1=current_features['reviews'],
+                    temp_df = join_data_frames_by_optional_key(key=['item', 'date'], df1=current_features['reviews'],
                                                               df2=tmp_df)
-                if 'euro' in current_features:
-                    tmp_df = join_data_frames_by_optional_key(key='date', df1=current_features['euro'],
-                                                              df2=tmp_df)
-                if 'dollar' in current_features:
-                    tmp_df = join_data_frames_by_optional_key(key='date', df1=current_features['dollar'],
-                                                              df2=tmp_df)
+                    if temp_df.size > (tmp_df.size / 10):
+                        temp_df = fill_reviews(current_features['reviews'], tmp_df)
+                        tmp_df = join_data_frames_by_optional_key(key=['item', 'date'], df1=temp_df,
+                                                                     df2=tmp_df)
+        if manufacturer_flag:
+            tmp_df = tmp_df.drop(['manufacturer'], axis=1)
+
     return tmp_df
 
 
@@ -148,3 +152,20 @@ def get_pandas_data_frame_from_list(generic_entry: any) -> pd.DataFrame:
 
 def get_pandas_data_frame_from_dictionary(generic_dictionary: any) -> pd.DataFrame:
     return pd.DataFrame(data=generic_dictionary)
+
+
+def fill_reviews(reviews: pd.DataFrame, df: pd.DataFrame):
+    final_df = pd.DataFrame
+    df_size = len(df.index)
+    df_first_date = df['date'][0]
+    df_last_Date  = df['date'][df_size - 1]
+
+    idx = pd.date_range(df_first_date, df_last_Date)
+
+    final_df = reviews.reindex(idx, fill_value=0)
+    return final_df
+
+
+
+
+

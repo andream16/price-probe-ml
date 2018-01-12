@@ -1,3 +1,4 @@
+import datetime
 from collections import namedtuple
 from typing import List
 
@@ -30,7 +31,10 @@ def get_prices_by_item(sc: SparkContext, item: str):
                 flagged_prices.append(PriceEntry(p.item, p.date, p.price, 1000.0))
             else:
                 flagged_prices.append(PriceEntry(p.item, p.date, p.price, 0.0))
+
+        flagged_prices.sort(key=lambda r: r.date)
         prices_tuple = []
+
         for price in flagged_prices:
             prices_tuple.append(sql_entry(price.item, price.date, price.price, price.flag))
         return prices_tuple

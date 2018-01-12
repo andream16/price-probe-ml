@@ -22,11 +22,10 @@ class ItemEntry:
 
 class Item:
 
-    def __init__(self, item: str, categories: List[category.Category], manufacturer: str,
+    def __init__(self, item: str, manufacturer: str,
                  prices: List[price.PriceEntry], reviews: List[review.ReviewEntry],
                  trend_entries: List[trend.TrendEntry]):
         self.item = item
-        self.categories = categories
         self.manufacturer = manufacturer
         self.prices = prices
         self.reviews = reviews
@@ -42,8 +41,10 @@ def get_items(sc: SparkContext, page: int, size: int) -> List[ItemEntry]:
     else:
         start = ((page - 1) * size) + 1
         end = page * size
-    data_frame = sc.sql('SELECT item, manufacturer, has_reviews FROM item WHERE id BETWEEN "{}" AND "{}"'
-                        .format(start, end))
+    #data_frame = sc.sql('SELECT item, manufacturer, has_reviews FROM item WHERE id BETWEEN "{}" AND "{}" ORDER BY id asc'
+     #                   .format(start, end))
+    data_frame = sc.sql(
+        'SELECT item, manufacturer, has_reviews FROM itemORDER BY id asc')
     parsed_items: List[ItemEntry] = data_frame.rdd.map(lambda row: sql_entry(row[0], row[1], row[2])).collect()
     if len(parsed_items) == size:
         for item in parsed_items:
