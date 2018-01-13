@@ -1,6 +1,5 @@
 from typing import List
 from itertools import combinations, chain
-
 # 3rd party
 from pyspark import SparkContext
 import pandas as pd
@@ -15,10 +14,12 @@ NO_MANUFACTURER = 'no_manufacturer'
 
 
 def start_algorithm(sc: SparkContext, config):
+    fout = "results.txt"
+    fo = open(fout, "w")
     items = get_parsed_items(sc)
     for itm in items:
         data_frames_combinations = feature_dict_creator(itm)
-        print(items[3].item)
+        print(itm.item)
         final_data_frame = get_global_data_frame(data_frames_combinations)
         final_combinations = get_all_possible_combinations_from_features(final_data_frame)
         final_dictionary_data_frame = get_final_data_frames_dictionary(final_data_frame, final_combinations)
@@ -28,7 +29,10 @@ def start_algorithm(sc: SparkContext, config):
            arima.test_arima(attr, arima_dict)
         best_result = arima.plot_best_result()
         forecast.save_forecast(itm.item, best_result, config)
-        print("Score "+itm.item+"  : "+best_result['score'])
+        for k, v in best_result.items():
+            fo.write(str(itm.item)+'\n')
+            fo.write(str(k) + ' >>> ' + str(v) + '\n\n')
+    fo.close()
 
 
 def get_parsed_items(sc: SparkContext) -> (List[item.Item], any):
