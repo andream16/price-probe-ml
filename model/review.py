@@ -26,10 +26,7 @@ class Review:
         parsed_reviews = data_frame.rdd.map(
             lambda row: sql_entry(row[0], row[1], row[2], row[3])).collect()
         if len(parsed_reviews) > 0:
-            reviews = []
             reviews_tuples = []
-            for i, r in enumerate(parsed_reviews):
-                reviews.append(ReviewEntry(r.item, r.date, float(r.sentiment) * 1000, float(r.stars) * 1000))
-            for r in reviews:
+            for r in parsed_reviews:
                 reviews_tuples.append(sql_entry(r.item, r.date, r.sentiment, r.stars))
             return reviews_tuples

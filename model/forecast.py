@@ -19,8 +19,11 @@ def save_forecast(item: str, forecast_dictionary, config):
     for idx, val in enumerate(forecast_entries):
         date_str = datetime.fromtimestamp(date_forecast[idx] / 1000000000).strftime("%Y-%m-%d")
         current_price = float("{0:.2f}".format(val))
-        forecast_dict['forecast_entries'].append({'date': date_str, 'price': current_price})
-
+        forecast_dict['forecast_entries'].append({
+            'date': date_str,
+            'price': current_price,
+            'score': forecast_dictionary['score']
+        })
     post_forecast(forecast_dict, config)
 
 

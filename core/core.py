@@ -6,10 +6,9 @@ import pandas as pd
 
 # ARIMA
 from algorithm.arima import arima
-from algorithm.lstm import lstm
 
 # Models
-from model import category, currency, item, manufacturer, price, review, trend, forecast
+from model import item, manufacturer, price, review, trend, forecast
 
 NO_MANUFACTURER = 'no_manufacturer'
 
@@ -38,8 +37,6 @@ def start_algorithm(sc: SparkContext, config):
 
 
 def get_parsed_items(sc: SparkContext) -> (List[item.Item], any):
-
-    #currencies = currency.get_currencies(sc)
     items = item.get_items(sc, 1, 10)
     final_items = []
     if len(items) > 0:
@@ -108,19 +105,16 @@ def get_global_data_frame(current_features):
                     manufacturer_flag = True
                     tmp_df = join_data_frames_by_optional_key(df1=current_features['manufacturer'], df2=tmp_df)
                     if 'trend' in current_features and flag:
-                        flag = False;
+                        flag = False
                         tmp_df = join_data_frames_by_optional_key(key=['manufacturer', 'date'], df1=current_features['trend'],
                                                                   df2=tmp_df)
                 if 'reviews' in current_features:
-                    temp_df = join_data_frames_by_optional_key(key=['item', 'date'], df1=current_features['reviews'],
+                    temp_reviews_df = join_data_frames_by_optional_key(key=['item', 'date'], df1=current_features['reviews'],
                                                               df2=tmp_df)
-                    if temp_df.size > (tmp_df.size / 10):
-                        temp_df = fill_reviews(current_features['reviews'], tmp_df)
-                        tmp_df = join_data_frames_by_optional_key(key=['item', 'date'], df1=temp_df,
-                                                                     df2=tmp_df)
+                    if temp_reviews_df.size > 4:
+                        tmp_df = temp_reviews_df.rename(columns={'sentiment_x' : 'sentiment', 'stars_x' : 'stars'})
         if manufacturer_flag:
             tmp_df = tmp_df.drop(['manufacturer'], axis=1)
-
     return tmp_df
 
 
@@ -159,17 +153,6 @@ def get_pandas_data_frame_from_list(generic_entry: any) -> pd.DataFrame:
 def get_pandas_data_frame_from_dictionary(generic_dictionary: any) -> pd.DataFrame:
     return pd.DataFrame(data=generic_dictionary)
 
-
-def fill_reviews(reviews: pd.DataFrame, df: pd.DataFrame):
-    final_df = pd.DataFrame
-    df_size = len(df.index)
-    df_first_date = df['date'][0]
-    df_last_Date  = df['date'][df_size - 1]
-
-    idx = pd.date_range(df_first_date, df_last_Date)
-
-    final_df = reviews.reindex(idx, fill_value=0)
-    return final_df
 
 
 

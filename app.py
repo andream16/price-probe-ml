@@ -1,3 +1,5 @@
+import warnings
+
 # Spark
 from spark import spark
 
@@ -7,7 +9,7 @@ from configuration import configuration
 # Core
 from core import core
 
-
+warnings.filterwarnings("ignore")
 app_configuration = configuration.get_configuration('remote')
 spark = spark.Spark()
 spark_context = spark.init_configuration(app_configuration)

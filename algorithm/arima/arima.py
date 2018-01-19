@@ -240,12 +240,16 @@ def find_arima_parameters_by_dataframe(data_frame):
 
     p, d, q = find_p_d_q_values(prices_column, prices_elements_number)
     print(p, d, q)
-    dict['order']= p, d, q
+    dict['order'] = p, d, q
     dict['prices_column'] = prices_column
     dict['data_frame'] = data_frame
     return dict
 
 
-def mean_absolute_percentage_error(y_true, y_pred):
-    y_true, y_pred = np.array(y_true), np.array(y_pred)
-    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+# https://en.wikipedia.org/wiki/Mean_absolute_percentage_error
+def mean_absolute_percentage_error(test, forecast):
+    m = (100 / len(test))
+    abs_sum = 0.0
+    for i in test:
+        abs_sum += abs((test[i] - forecast[i]) / test[i])
+    return abs_sum * m
