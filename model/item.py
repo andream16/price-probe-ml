@@ -43,6 +43,7 @@ def get_items(sc: SparkContext, page: int, size: int) -> List[ItemEntry]:
         end = page * size
     #data_frame = sc.sql('SELECT item, manufacturer, has_reviews FROM item WHERE id BETWEEN "{}" AND "{}" ORDER BY id asc'
      #                   .format(start, end))
+
     data_frame = sc.sql(
         'SELECT item, manufacturer, has_reviews FROM item ORDER BY id asc')
     parsed_items: List[ItemEntry] = data_frame.rdd.map(lambda row: sql_entry(row[0], row[1], row[2])).collect()

@@ -7,9 +7,10 @@ def get_configuration(flag):
     if flag == 'remote':
         host = data['Remote']['Host']
         port = data['Remote']['DBPort']
-        server_port = data['Remote']['ServerPort']
     else:
         host = data['Local']['Host']
         port = data['Local']['DBPort']
     db_url = data['Spark']['DBUrl']
+    server_port = data['Remote']['ServerPort']
+
     return host, port, db_url, server_port

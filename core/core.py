@@ -6,6 +6,7 @@ import pandas as pd
 
 # ARIMA
 from algorithm.arima import arima
+from algorithm.lstm import lstm
 
 # Models
 from model import category, currency, item, manufacturer, price, review, trend, forecast
@@ -14,7 +15,7 @@ NO_MANUFACTURER = 'no_manufacturer'
 
 
 def start_algorithm(sc: SparkContext, config):
-    fout = "results.txt"
+    fout = "results2.txt"
     fo = open(fout, "w")
     items = get_parsed_items(sc)
     for itm in items:
@@ -27,11 +28,12 @@ def start_algorithm(sc: SparkContext, config):
         for attr, value in final_dictionary_data_frame.items():
            arima_dict['data_frame'] = value['data_frame']
            arima.test_arima(attr, arima_dict)
+           #lstm.test_lstm(arima_dict)
+
         best_result = arima.plot_best_result()
         forecast.save_forecast(itm.item, best_result, config)
-        for k, v in best_result.items():
-            fo.write(str(itm.item)+'\n')
-            fo.write(str(k) + ' >>> ' + str(v) + '\n\n')
+        fo.write(str(itm.item)+' - '+str(best_result['score'])+'\n')
+        #fo.write(str(best_result['score'])+'\n')
     fo.close()
 
 

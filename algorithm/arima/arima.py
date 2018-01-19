@@ -1,11 +1,12 @@
 
 # 3rd party
 import numpy
-from statsmodels.tsa.arima_model import ARIMA
 from sklearn.metrics import mean_squared_error
+from statsmodels.tsa.arima_model import ARIMA
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import statsmodels.api as sm
 from statsmodels.tsa.stattools import acf, pacf, adfuller
 
 results = {}
@@ -33,7 +34,7 @@ def evaluate_arima_model(X, arima_order):
 # evaluate combinations of p, d and q values for an ARIMA model
 def evaluate_models(dataset, p_values, d_values, q_values):
     dataset = dataset.astype('float32')
-    best_score, best_cfg = float("inf"), None
+    best_score, best_cfg = float("inf"), (0, 0, 0)
     for p in p_values:
         for d in d_values:
             for q in q_values:
@@ -81,10 +82,7 @@ def test_arima(title, dict):
 
     # Setting index on date
     data_frame = data_frame.set_index('date')
-    if d == 0:
-        best_configuration = evaluate_models(prices_column, range(0, p), [d], range(0, q))
-    else:
-        best_configuration = evaluate_models(prices_column, range(0, p), range(0, d), range(0, q))
+    best_configuration = evaluate_models(prices_column, range(0, p), [d], range(0, q))
     size = int(len(prices_column) * 0.9)
     training_set, test = prices_column[0:size], prices_column[size:]
 
@@ -148,7 +146,7 @@ def test_arima(title, dict):
 
     results[title] = {
         'forecast': forecast, 'date_forecast': date_forecast,
-        'score': mean_squared_error(test, forecast), 'prices': prices_column,
+        'score': mean_absolute_percentage_error(test, forecast), 'prices': prices_column,
         'training_set': training_set
     }
 
@@ -196,10 +194,18 @@ def compute_acf_pacf(prices_column: pd.Series, prices_elements_number:int):
     # https://onlinecourses.science.psu.edu/stat510/node/60
     # Threshold values for ACF and PACF for 95% Confidence Interval
     positive_threshold = 1.96 / np.sqrt(prices_elements_number)
+    if prices_column.min() == prices_column.max():
+        return 0, 0
     lag_acf = acf(prices_column, nlags=prices_elements_number)
     # PACF = Partially Autocorrelation Function. Correlation between points not looking at already visited ones.
     # https://onlinecourses.science.psu.edu/stat510/node/46
     lag_pacf = pacf(prices_column, nlags=prices_elements_number)
+    fig = plt.figure(figsize=(12, 8))
+    ax1 = fig.add_subplot(211)
+    fig = sm.graphics.tsa.plot_acf(prices_column, lags=40, ax=ax1)
+    ax2 = fig.add_subplot(212)
+    fig = sm.graphics.tsa.plot_pacf(prices_column, lags=40, ax=ax2)
+    plt.show()
     acf_it = 0
     pacf_it = 0
     for value in np.nditer(lag_acf):
@@ -239,3 +245,7 @@ def find_arima_parameters_by_dataframe(data_frame):
     dict['data_frame'] = data_frame
     return dict
 
+
+def mean_absolute_percentage_error(y_true, y_pred):
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
