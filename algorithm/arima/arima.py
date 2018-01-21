@@ -9,7 +9,6 @@ import numpy as np
 import statsmodels.api as sm
 from statsmodels.tsa.stattools import acf, pacf, adfuller
 
-results = {}
 
 
 # evaluate an ARIMA model for a given order (p,d,q)
@@ -74,6 +73,7 @@ def find_d(series, threshold, d):
 
 
 def test_arima(title, dict):
+    results = {}
 
     prices_column = dict['prices_column']
     data_frame = dict['data_frame']
@@ -119,51 +119,67 @@ def test_arima(title, dict):
             if count_flag == check_duplicated_flag.size:
                 flag_flag = True
             if not flag_flag and not flag_trend:
-                model = ARIMA(training_set, order=best_configuration, exog=selected_columns)
-                model_fit = model.fit(disp=-1)
-                forecast = model_fit.forecast(steps=len(test), exog=selected_columns_test)[0]
+                try:
+                    model = ARIMA(training_set, order=best_configuration, exog=selected_columns)
+                    model_fit = model.fit(disp=-1)
+                    forecast = model_fit.forecast(steps=len(test), exog=selected_columns_test)[0]
+                except:
+                    pass
             elif not flag_trend:
-                model = ARIMA(training_set, order=best_configuration, exog=selected_columns['trend_value'])
-                model_fit = model.fit(disp=-1)
-                forecast = model_fit.forecast(steps=len(test), exog=selected_columns_test['trend_value'])[0]
+                try:
+                    model = ARIMA(training_set, order=best_configuration, exog=selected_columns['trend_value'])
+                    model_fit = model.fit(disp=-1)
+                    forecast = model_fit.forecast(steps=len(test), exog=selected_columns_test['trend_value'])[0]
+                except:
+                    pass
             elif not flag_flag:
-                model = ARIMA(training_set, order=best_configuration, exog=selected_columns['flag'])
-                model_fit = model.fit(disp=-1)
-                forecast = model_fit.forecast(steps=len(test), exog=selected_columns_test['flag'])[0]
+                try:
+                    model = ARIMA(training_set, order=best_configuration, exog=selected_columns['flag'])
+                    model_fit = model.fit(disp=-1)
+                    forecast = model_fit.forecast(steps=len(test), exog=selected_columns_test['flag'])[0]
+                except:
+                    pass
             else:
-                model = ARIMA(training_set, order=best_configuration)
-                model_fit = model.fit(disp=-1)
-                forecast = model_fit.forecast(steps=len(test))[0]
+                try:
+                    model = ARIMA(training_set, order=best_configuration)
+                    model_fit = model.fit(disp=-1)
+                    forecast = model_fit.forecast(steps=len(test))[0]
+                except:
+                    pass
         else:
             return
     else:
-        # Fit model
-        model = ARIMA(training_set, order=best_configuration)
-        model_fit = model.fit(disp=-1)
-        # one-step out-of sample forecast
-        forecast = model_fit.forecast(steps=len(test))[0]
-    date_forecast = test.index._data
+        try:
+            # Fit model
+            model = ARIMA(training_set, order=best_configuration)
+            model_fit = model.fit(disp=-1)
+            # one-step out-of sample forecast
+            forecast = model_fit.forecast(steps=len(test))[0]
+        except:
+            pass
 
+    date_forecast = test.index._data
     results[title] = {
         'forecast': forecast, 'date_forecast': date_forecast,
-        'score': mean_absolute_percentage_error(test, forecast), 'prices': prices_column,
+        'score': mean_absolute_percentage_error(test.values, forecast), 'prices': prices_column,
         'training_set': training_set
     }
+    return results
 
 
-def plot_best_result():
+def plot_best_result(results):
     best_score = 0
 
     best_result = {}
     for attr, value in results.items():
-        if best_score == 0 or results[attr]['score'] < best_score:
-            best_score = results[attr]['score']
+        if best_score == 0 or results[attr][attr]['score'] < best_score:
+            best_score = results[attr][attr]['score']
             best_result = {
                 'name': attr, 
-                'prices': results[attr]['prices'],
-                'training_set': results[attr]['training_set'],
-                'date_forecast': results[attr]['date_forecast'],
-                'forecast': results[attr]['forecast'],
+                'prices': results[attr][attr]['prices'],
+                'training_set': results[attr][attr]['training_set'],
+                'date_forecast': results[attr][attr]['date_forecast'],
+                'forecast': results[attr][attr]['forecast'],
                 'score': best_score
             }
     plt.style.use('classic')
@@ -175,7 +191,7 @@ def plot_best_result():
     return best_result
 
 
-def find_p_d_q_values(prices_column:pd.Series, prices_elements_number:int):
+def find_p_d_q_values(prices_column: pd.Series, prices_elements_number:int):
 
     # First time a ACF value crosses positive threshold (AR)
     p = 0
@@ -248,8 +264,13 @@ def find_arima_parameters_by_dataframe(data_frame):
 
 # https://en.wikipedia.org/wiki/Mean_absolute_percentage_error
 def mean_absolute_percentage_error(test, forecast):
-    m = (100 / len(test))
+    size = len(test)
+    m = (100 / size)
     abs_sum = 0.0
-    for i in test:
+    for i in range(len(test)):
+        if test[i] == 0:
+            size -= 1
+            m = (100 / size)
+            continue
         abs_sum += abs((test[i] - forecast[i]) / test[i])
     return abs_sum * m

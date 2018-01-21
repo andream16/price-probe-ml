@@ -14,10 +14,11 @@ NO_MANUFACTURER = 'no_manufacturer'
 
 
 def start_algorithm(sc: SparkContext, config):
-    fout = "results2.txt"
-    fo = open(fout, "w")
+    #fout = "results2.txt"
+    #fo = open(fout, "w")
     items = get_parsed_items(sc)
     for itm in items:
+        results = {}
         data_frames_combinations = feature_dict_creator(itm)
         print(itm.item)
         final_data_frame = get_global_data_frame(data_frames_combinations)
@@ -26,14 +27,14 @@ def start_algorithm(sc: SparkContext, config):
         arima_dict = arima.find_arima_parameters_by_dataframe(final_data_frame)
         for attr, value in final_dictionary_data_frame.items():
            arima_dict['data_frame'] = value['data_frame']
-           arima.test_arima(attr, arima_dict)
+           results[attr] = arima.test_arima(attr, arima_dict)
            #lstm.test_lstm(arima_dict)
 
-        best_result = arima.plot_best_result()
+        best_result = arima.plot_best_result(results)
         forecast.save_forecast(itm.item, best_result, config)
-        fo.write(str(itm.item)+' - '+str(best_result['score'])+'\n')
+        #fo.write(str(itm.item)+' - '+str(best_result['score'])+'\n')
         #fo.write(str(best_result['score'])+'\n')
-    fo.close()
+    #fo.close()
 
 
 def get_parsed_items(sc: SparkContext) -> (List[item.Item], any):
