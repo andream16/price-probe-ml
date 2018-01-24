@@ -9,12 +9,12 @@ import numpy as np
 import statsmodels.api as sm
 from statsmodels.tsa.stattools import acf, pacf, adfuller
 
-
+percentage = [0.7, 0.8]
 
 # evaluate an ARIMA model for a given order (p,d,q)
 def evaluate_arima_model(X, arima_order):
     # prepare training dataset
-    train_size = int(len(X) * 0.9)
+    train_size = int(len(X) * percentage[0])
     train, test = X[0:train_size], X[train_size:]
     history = [x for x in train]
     # make predictions
@@ -83,7 +83,7 @@ def test_arima(title, dict):
     # Setting index on date
     data_frame = data_frame.set_index('date')
     best_configuration = evaluate_models(prices_column, range(0, p), [d], range(0, q))
-    size = int(len(prices_column) * 0.9)
+    size = int(len(prices_column) * percentage[0])
     training_set, test = prices_column[0:size], prices_column[size:]
 
     # External Columns
@@ -162,7 +162,7 @@ def test_arima(title, dict):
     results[title] = {
         'forecast': forecast, 'date_forecast': date_forecast,
         'score': mean_absolute_percentage_error(test.values, forecast), 'prices': prices_column,
-        'training_set': training_set
+        'training_set': training_set,
     }
     return results
 
@@ -180,7 +180,8 @@ def plot_best_result(results):
                 'training_set': results[attr][attr]['training_set'],
                 'date_forecast': results[attr][attr]['date_forecast'],
                 'forecast': results[attr][attr]['forecast'],
-                'score': best_score
+                'score': best_score,
+                'percentage': str(int(float("{0:.2f}".format(1 - percentage[0])) * 100)) + "%"
             }
     plt.style.use('classic')
     best_result['prices'].plot()

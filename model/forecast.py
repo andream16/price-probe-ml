@@ -22,7 +22,8 @@ def save_forecast(item: str, forecast_dictionary, config):
         forecast_dict['forecast_entries'].append({
             'date': date_str,
             'price': current_price,
-            'score': forecast_dictionary['score']
+            'score': forecast_dictionary['score'],
+            'test_size': forecast_dictionary['percentage']
         })
     post_forecast(forecast_dict, config)
 

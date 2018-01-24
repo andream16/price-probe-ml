@@ -45,7 +45,7 @@ def get_items(sc: SparkContext, page: int, size: int) -> List[ItemEntry]:
      #                   .format(start, end))
 
     data_frame = sc.sql(
-        'SELECT item, manufacturer, has_reviews FROM item where id = 24 ORDER BY id asc')
+        'SELECT item, manufacturer, has_reviews FROM item ORDER BY id asc')
     parsed_items: List[ItemEntry] = data_frame.rdd.map(lambda row: sql_entry(row[0], row[1], row[2])).collect()
     #if len(parsed_items) == size:
     for item in parsed_items:
