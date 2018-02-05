@@ -30,8 +30,9 @@ def start_algorithm(sc: SparkContext, config):
            results[attr] = arima.test_arima(attr, arima_dict)
            #lstm.test_lstm(arima_dict)
 
-        best_result = arima.plot_best_result(results)
-        forecast.save_forecast(itm.item, best_result, config)
+        best_results = arima.plot_best_result(results)
+        for result in best_results:
+            forecast.save_forecast(itm.item, result, config)
         #fo.write(str(itm.item)+' - '+str(best_result['score'])+'\n')
         #fo.write(str(best_result['score'])+'\n')
     #fo.close()

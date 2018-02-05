@@ -169,27 +169,22 @@ def test_arima(title, dict):
 
 def plot_best_result(results):
     best_score = 0
-
-    best_result = {}
+    results_all = []
     for attr, value in results.items():
-        if best_score == 0 or results[attr][attr]['score'] < best_score:
-            best_score = results[attr][attr]['score']
-            best_result = {
-                'name': attr, 
-                'prices': results[attr][attr]['prices'],
-                'training_set': results[attr][attr]['training_set'],
-                'date_forecast': results[attr][attr]['date_forecast'],
-                'forecast': results[attr][attr]['forecast'],
-                'score': best_score,
-                'percentage': str(int(float("{0:.2f}".format(1 - percentage[0])) * 100)) + "%"
-            }
-    plt.style.use('classic')
-    best_result['prices'].plot()
-    best_result['training_set'].plot()
-    plt.plot(best_result['date_forecast'], best_result['forecast'])
-    plt.title(best_result['name'])
-    plt.show()
-    return best_result
+        #if best_score == 0 or results[attr][attr]['score'] < best_score:
+        best_score = results[attr][attr]['score']
+        best_result = {
+            'name': attr,
+            'prices': results[attr][attr]['prices'],
+            'training_set': results[attr][attr]['training_set'],
+            'date_forecast': results[attr][attr]['date_forecast'],
+            'forecast': results[attr][attr]['forecast'],
+            'score': best_score,
+            'percentage': str(int(float("{0:.2f}".format(1 - percentage[0])) * 100)) + "%"
+        }
+        results_all.append(best_result)
+
+    return results_all
 
 
 def find_p_d_q_values(prices_column: pd.Series, prices_elements_number:int):

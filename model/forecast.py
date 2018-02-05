@@ -30,7 +30,7 @@ def save_forecast(item: str, forecast_dictionary, config):
 
 def post_forecast(forecast_dict, config):
     json_entry = json.dumps(forecast_dict, ensure_ascii=False)
-    remote_url = 'http://' + config[0] + ':' + config[3] + '/api/forecast'
+    remote_url = 'http://' + config[0] + ':' + config[3] + '/api/statistics'
     r = requests.post(remote_url, data=json_entry)
     if r.status_code == 200:
         return
